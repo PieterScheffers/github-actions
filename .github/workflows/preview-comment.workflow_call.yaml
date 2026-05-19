@@ -1,0 +1,121 @@
+name: Workflow for PR comment preview requests
+
+on:
+  workflow_call:
+    inputs:
+      pr_number:
+        description: 'The number of the PR for which to resolve the preview environment'
+        required: true
+        type: string
+      repository:
+        description: 'The repository (in owner/repo format) containing the PR'
+        required: true
+        type: string
+      comment_id:
+        description: 'The ID of the comment that triggered the workflow (if applicable)'
+        required: false
+        type: string
+      comment_body:
+        description: 'The body of the comment that triggered the workflow (if applicable)'
+        required: false
+        type: string
+
+jobs:
+  resolve-preview:
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: read
+    outputs:
+      preview_env: ${{ steps.resolve.outputs.preview_env }}
+      pr_number:   ${{ steps.resolve.outputs.pr_number }}
+      comment_id:  ${{ steps.resolve.outputs.comment_id }}
+      owner:       ${{ steps.resolve.outputs.owner }}
+      repo:        ${{ steps.resolve.outputs.repo }}
+    steps:
+      - name: Resolve preview request
+        id: resolve
+        uses: actions/github-script@v7
+        env:
+          PR_NUMBER: ${{ inputs.pr_number }}
+          REPOSITORY: ${{ inputs.repository }}
+          COMMENT_ID: ${{ inputs.comment_id }}
+          COMMENT_BODY: ${{ inputs.comment_body }}
+        with:
+          script: |
+            const pattern = /^Deploy preview ([a-zA-Z0-9_-]+)\s*$/m;
+            const [owner, repo] = process.env.REPOSITORY.split('/');
+
+            if (!process.env.PR_NUMBER) {
+              return core.setFailed('PR_NUMBER is required');
+            }
+            if (!process.env.REPOSITORY || process.env.REPOSITORY.split('/').length < 2) {
+              return core.setFailed('REPOSITORY is required and should be in owner/repo format');
+            }
+
+            async function getComment() {
+              if (process.env.COMMENT_ID && process.env.COMMENT_BODY && process.env.COMMENT_BODY.match(pattern)) {
+                return { id: process.env.COMMENT_ID, body: process.env.COMMENT_BODY };
+              }
+
+              if (process.env.COMMENT_ID) {
+                const { data: comment } = await github.rest.issues.getComment({
+                  owner,
+                  repo,
+                  comment_id: Number(process.env.COMMENT_ID),
+                });
+
+                if (comment.body?.match(pattern)) {
+                  return { id: comment.id, body: comment.body };
+                }
+              }
+
+              for await (const { data: page } of github.paginate.iterator(
+                github.rest.issues.listComments,
+                {
+                  owner,
+                  repo,
+                  issue_number: Number(process.env.PR_NUMBER),
+                  sort: 'created',
+                  direction: 'desc',
+                  per_page: 100,
+                }
+              )) {
+                for (const comment of page) {
+                  const match = comment.body?.match(pattern);
+                  if (!match) continue;
+
+                  return { id: comment.id, body: comment.body };
+                }
+              }
+
+              return null;
+            }
+
+            const comment = await getComment();
+            if (!comment?.body) {
+              return core.error('No matching Deploy preview comment found on this PR — skipping.');
+            }
+
+            const match = comment.body.match(pattern);
+            const previewEnv = match[1];
+
+            core.setOutput('preview_env', previewEnv);
+            core.setOutput('pr_number', String(process.env.PR_NUMBER));
+            core.setOutput('comment_id', String(comment.id));
+            core.setOutput('owner', String(owner));
+            core.setOutput('repo', String(repo));
+
+      - name: Add Rocket to comment
+        uses: actions/github-script@v7
+        if: ${{ inputs.comment_id }}
+        with:
+          script: |
+            await github.rest.reactions.createForIssueComment({
+              owner: steps.resolve.outputs.owner,
+              repo: steps.resolve.outputs.repo,
+              comment_id: steps.resolve.outputs.comment_id,
+              content: 'rocket'
+            });
+
+      - name: Run deploy
+        run: echo "Deploying PR ${{ steps.resolve.outputs.pr_number }} to environment '${{ steps.resolve.outputs.preview_env }}' based on comment ID ${{ steps.resolve.outputs.comment_id }}"
