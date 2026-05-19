@@ -1,5 +1,6 @@
 name: "On Labeled PR"
 
+# Runs on every label that is added to the PR. When the PR is to merge it into main
 on:
   pull_request:
     branches:

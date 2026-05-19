@@ -1,5 +1,6 @@
 name: "On PR"
 
+# Runs on every PR commit. When the PR is to merge it into main
 on:
   pull_request:
     branches:
