@@ -23,8 +23,6 @@ on:
 jobs:
   resolve-preview:
     runs-on: ubuntu-latest
-    permissions:
-      pull-requests: read
     outputs:
       preview_env: ${{ steps.resolve.outputs.preview_env }}
       pr_number:   ${{ steps.resolve.outputs.pr_number }}
