@@ -9,8 +9,6 @@ on:
 jobs:
   resolve-preview:
     runs-on: ubuntu-latest
-    permissions:
-      pull-requests: read
     outputs:
       pr_number:    ${{ steps.call_resolve.outputs.pr_number }}
       repository:   ${{ steps.call_resolve.outputs.repository }}
