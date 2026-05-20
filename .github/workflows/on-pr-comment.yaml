@@ -36,6 +36,8 @@ jobs:
 
   call-preview-deploy:
     needs: resolve-preview
+    permissions:
+      pull-requests: write
     uses: ./.github/workflows/preview-comment.workflow_call.yaml
     with:
       pr_number: ${{ needs.resolve-preview.outputs.pr_number }}
