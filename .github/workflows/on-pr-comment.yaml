@@ -33,11 +33,11 @@ jobs:
               core.setOutput('pr_number', String(context.payload.pull_request.number));
               core.setOutput('repository', `${context.repo.owner}/${context.repo.repo}`);
             }
+      - name: Call preview deploy
+        uses: ./.github/workflows/preview-comment.workflow_call.yaml
+        with:
+          pr_number: ${{ steps.call_resolve.outputs.pr_number }}
+          repository: ${{ steps.call_resolve.outputs.repository }}
+          comment_id: ${{ steps.call_resolve.outputs.comment_id }}
+          comment_body: ${{ steps.call_resolve.outputs.comment_body }}
 
-  call_preview_deploy:
-    uses: ./.github/workflows/preview-comment.workflow_call.yaml
-    with:
-      pr_number: ${{ needs.resolve-preview.outputs.pr_number }}
-      repository: ${{ needs.resolve-preview.outputs.repository }}
-      comment_id: ${{ needs.resolve-preview.outputs.comment_id }}
-      comment_body: ${{ needs.resolve-preview.outputs.comment_body }}
