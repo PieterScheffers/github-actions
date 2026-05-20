@@ -34,10 +34,10 @@ jobs:
         id: resolve
         uses: actions/github-script@v7
         env:
-          PR_NUMBER: ${{ github.event.inputs.pr_number }}
-          REPOSITORY: ${{ github.event.inputs.repository }}
-          COMMENT_ID: ${{ github.event.inputs.comment_id }}
-          COMMENT_BODY: ${{ github.event.inputs.comment_body }}
+          PR_NUMBER: ${{ inputs.pr_number }}
+          REPOSITORY: ${{ inputs.repository }}
+          COMMENT_ID: ${{ inputs.comment_id }}
+          COMMENT_BODY: ${{ inputs.comment_body }}
         with:
           script: |
             const pattern = /^Deploy preview ([a-zA-Z0-9_-]+)\s*$/m;
@@ -105,13 +105,17 @@ jobs:
 
       - name: Add Rocket to comment
         uses: actions/github-script@v7
-        if: ${{ inputs.comment_id }}
+        if: ${{ steps.resolve.outputs.comment_id }}
+        env:
+          OWNER: ${{ steps.resolve.outputs.owner }}
+          REPO: ${{ steps.resolve.outputs.repo }}
+          COMMENT_ID: ${{ steps.resolve.outputs.comment_id }}
         with:
           script: |
             await github.rest.reactions.createForIssueComment({
-              owner: steps.resolve.outputs.owner,
-              repo: steps.resolve.outputs.repo,
-              comment_id: steps.resolve.outputs.comment_id,
+              owner: process.env.OWNER,
+              repo: process.env.REPO,
+              comment_id: Number(process.env.COMMENT_ID),
               content: 'rocket'
             });
 
