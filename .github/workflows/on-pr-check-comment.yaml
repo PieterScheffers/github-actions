@@ -1,0 +1,14 @@
+name: Deploy Preview
+
+on:
+  pull_request:
+    branches: [main]
+
+jobs:
+  call-preview-deploy:
+    permissions:
+      pull-requests: write
+    uses: ./.github/workflows/preview-comment.workflow_call.yaml
+    with:
+      pr_number: ${{ github.event.pull_request.number }}
+      repository: ${{ github.repository }}

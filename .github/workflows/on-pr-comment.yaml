@@ -1,49 +1,17 @@
 name: Deploy Preview
 
 on:
-  pull_request:
-    branches: [main]
   issue_comment:
     types: [created, edited]
 
 jobs:
-  resolve-preview:
-    runs-on: ubuntu-latest
-    if: ${{ (github.event_name == 'issue_comment' && github.event.issue.pull_request) || github.event_name == 'pull_request' }}
-    outputs:
-      pr_number:    ${{ steps.call_resolve.outputs.pr_number }}
-      repository:   ${{ steps.call_resolve.outputs.repository }}
-      comment_id:   ${{ steps.call_resolve.outputs.comment_id }}
-      comment_body: ${{ steps.call_resolve.outputs.comment_body }}
-    steps:
-      - name: Resolve preview request
-        id: call_resolve
-        uses: actions/github-script@v9
-        with:
-          script: |
-            const isPullRequestCommentEvent = context.eventName === 'issue_comment' && context.payload.issue.pull_request;
-
-            if (isPullRequestCommentEvent) {
-              core.info('Handling as PR comment event');
-              core.setOutput('pr_number', String(context.payload.issue.number));
-              core.setOutput('repository', `${context.repo.owner}/${context.repo.repo}`);
-              core.setOutput('comment_id', String(context.payload.comment.id));
-              core.setOutput('comment_body', context.payload.comment.body);
-            } else {
-              core.info('Handling as pull_request event');
-              core.setOutput('pr_number', String(context.payload.pull_request.number));
-              core.setOutput('repository', `${context.repo.owner}/${context.repo.repo}`);
-            }
-
   call-preview-deploy:
-    if: ${{ (github.event_name == 'issue_comment' && github.event.issue.pull_request) || github.event_name == 'pull_request' }}
-    needs: resolve-preview
+    if: ${{ github.event_name == 'issue_comment' && github.event.issue.pull_request }}
     permissions:
       pull-requests: write
     uses: ./.github/workflows/preview-comment.workflow_call.yaml
     with:
-      pr_number: ${{ needs.resolve-preview.outputs.pr_number }}
-      repository: ${{ needs.resolve-preview.outputs.repository }}
-      comment_id: ${{ needs.resolve-preview.outputs.comment_id }}
-      comment_body: ${{ needs.resolve-preview.outputs.comment_body }}
-
+      pr_number: ${{ github.event.issue.number }}
+      repository: ${{ github.repository }}
+      comment_id: ${{ github.event.comment.id }}
+      comment_body: ${{ github.event.comment.body }}
