@@ -122,4 +122,5 @@ jobs:
             });
 
       - name: Run deploy
+        if: ${{ steps.resolve.outputs.preview_env }}
         run: echo "Deploying PR ${{ steps.resolve.outputs.pr_number }} to environment '${{ steps.resolve.outputs.preview_env }}' based on comment ID ${{ steps.resolve.outputs.comment_id }}"
