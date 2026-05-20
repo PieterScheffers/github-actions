@@ -9,6 +9,7 @@ on:
 jobs:
   resolve-preview:
     runs-on: ubuntu-latest
+    if: ${{ (github.event_name == 'issue_comment' && github.event.issue.pull_request) || github.event_name == 'pull_request' }}
     outputs:
       pr_number:    ${{ steps.call_resolve.outputs.pr_number }}
       repository:   ${{ steps.call_resolve.outputs.repository }}
@@ -35,6 +36,7 @@ jobs:
             }
 
   call-preview-deploy:
+    if: ${{ (github.event_name == 'issue_comment' && github.event.issue.pull_request) || github.event_name == 'pull_request' }}
     needs: resolve-preview
     permissions:
       pull-requests: write
